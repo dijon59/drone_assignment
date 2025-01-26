@@ -1,37 +1,24 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from .enums import DroneModel, DroneState
+from enumfields import EnumField
 
+OPTIONAL = {'null': True, 'blank': True}
 
 class Drone(models.Model):
-
-    drone_model_choices = [
-        ('lightweight', 'Lightweight'),
-        ('middleweight', 'Middleweight'),
-        ('cruiserweight', 'Cruiserweight'),
-        ('heavyweight', 'Heavyweight'),
-    ]
-
-    drone_states = [
-        ('idle', 'IDLE'),
-        ('loading', 'LOADING'),
-        ('loaded', 'LOADED'),
-        ('delivering', 'DELIVERING'),
-        ('delivered', 'DELIVERED'),
-        ('returning', 'RETURNING'),
-    ]
-
     serial_number = models.CharField(max_length=100, unique=True)
-    drone_model = models.CharField(max_length=30, choices=drone_model_choices, default='')
+    drone_model = EnumField(DroneModel, default=DroneModel.LIGHTWEIGHT, max_length=30)
     weight_limit = models.DecimalField(validators=[MinValueValidator(0), MaxValueValidator(500.0)], decimal_places=1, default=0.0, max_digits=10)
     battery_capacity = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
-    state = models.CharField(max_length=20, choices=drone_states, default='')
+    state = EnumField(DroneState, default=DroneState.IDLE, max_length=20)
     created_at = models.DateTimeField(auto_now=True)
+    last_time_updated = models.DateTimeField(**OPTIONAL)
 
 
 class Medication(models.Model):
-    drone = models.ForeignKey(Drone, on_delete=models.CASCADE, null=True, blank=True, related_name='medications')
+    drone = models.ForeignKey(Drone, on_delete=models.CASCADE, **OPTIONAL, related_name='medications')
     name = models.CharField(max_length=100)
     weight = models.FloatField()
     code = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='med_images/', null=True, blank=True)
+    image = models.ImageField(upload_to='med_images/', **OPTIONAL)
     created_at = models.DateTimeField(auto_now=True)

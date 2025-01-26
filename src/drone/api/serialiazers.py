@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from src.drone.enums import DroneState
 from src.drone.models import Drone, Medication
 
 
@@ -48,6 +49,9 @@ class LoadMedicationSerializer(serializers.Serializer):
 
         if drone.battery_capacity < 25:
             raise serializers.ValidationError("Can not load medication, battery capacity is low")
+
+        if drone.state != DroneState.IDLE:
+            raise serializers.ValidationError("Not valid state to load medication.")
 
         if med_total_weight > drone.weight_limit:
             raise serializers.ValidationError("Medication weight exceeds the drone's weight limit")

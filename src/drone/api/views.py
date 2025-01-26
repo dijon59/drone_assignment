@@ -1,9 +1,13 @@
 from rest_framework import viewsets, mixins
+from src.drone.enums import DroneState
 from src.drone.models import Drone, Medication
 from src.drone.api.serialiazers import DroneSerializer, LoadMedicationSerializer, MedicationSerializer
-from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import action
+from django.utils.timezone import now
+from django.db.models import Q
 
 
 class RegisterDroneViewset(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -12,9 +16,28 @@ class RegisterDroneViewset(mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = DroneSerializer
 
 
-class LoadMedicationView(APIView):
-    def post(self, request, drone_id):
-        drone = get_object_or_404(Drone, pk=drone_id)
+class DroneViewset(ViewSet):
+    """
+    """
+    def _calculate_battery_depletion(self, drone: Drone):
+        """
+        Battery drain is calculated based on two metrics; time and weight
+        """
+        total_loaded_weight = sum(med.weight for med in drone.medications.all())
+
+        battery_capacity_depletion_per_g = 0.5 # 0.5% 1gr
+        depletion_per_minutes = 0.02  # 0.02% per minute
+
+        # get time between now and last update
+        btw_time = now() - drone.last_time_updated
+        btw_minutes = btw_time.total_seconds() / 60
+
+        return (total_loaded_weight * battery_capacity_depletion_per_g) + (depletion_per_minutes * btw_minutes)
+
+
+    @action(detail=True, methods=["post"], url_path="load-medications")
+    def load_medication(self, request, pk):
+        drone = get_object_or_404(Drone, pk=pk)
         med_data = request.data
         serializer = LoadMedicationSerializer(data=med_data, context={'drone': drone})
         serializer.is_valid(raise_exception=True)
@@ -28,7 +51,9 @@ class LoadMedicationView(APIView):
 
         # update drone state if meds are loaded
         if drone.medications.all().count() > 0:
-            drone.state = "LOADED"
+            drone.state = DroneState.LOADED
+            drone.last_time_updated = now()
+            drone.battery_capacity -= self._calculate_battery_depletion(drone)
             drone.save()
 
         return Response(
@@ -36,7 +61,44 @@ class LoadMedicationView(APIView):
                 "drone": {
                     "id": drone.id,
                     "serial_number": drone.serial_number,
+                    "battery_capacity": drone.battery_capacity,
+                    "state": drone.state.value,
                 },
                 "medications": MedicationSerializer(drone.medications.all(), many=True).data,
-            }
+            },
         )
+
+    @action(detail=True, methods=["get"], url_path="loaded-medications")
+    def check_loaded_mediction(self, request, pk):
+        drone = get_object_or_404(Drone, pk=pk)
+
+        return Response({
+            'drone': {
+                'id': drone.id,
+                'serial_number': drone.serial_number,
+            },
+            'loaded_medications': MedicationSerializer(drone.medications.all(), many=True).data
+        })
+
+    @action(detail=False, methods=["get"], url_path="available-drones")
+    def check_available_drone(self, request):
+        """
+        """
+        drones = Drone.objects.filter(Q(state=DroneState.IDLE) | Q(state=DroneState.RETURNING), battery_capacity__gte=25)
+
+        return Response ({
+            'available_drones': drones,
+        })
+
+    @action(detail=True, methods=["get"], url_path="battery-level")
+    def check_battery_level(self, request, pk):
+        drone = get_object_or_404(Drone, pk=pk)
+        battery_capacity = drone.battery_capacity - self._calculate_battery_depletion(drone)
+
+        return Response({
+            'drone': {
+                'id': drone.id,
+                'serial_number': drone.serial_number,
+                'battery_capacity': round(battery_capacity, 0),
+            },
+        })
