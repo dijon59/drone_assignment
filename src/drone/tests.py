@@ -116,7 +116,6 @@ class TestDroneAPIAndCalculateBatteryDepletion(APITestCase):
     def test_can_not_load_medication_that_exceed_drone_weight_limit(self):
         url = reverse('drones-load-medications', kwargs={'pk': self.drone_4.pk})
 
-
         data = {
             'medication_ids': [self.med1.id, self.med2.id]
         }
