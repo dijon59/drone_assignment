@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from .enums import DroneModel, DroneState
 from enumfields import EnumField
 
@@ -16,10 +16,21 @@ class Drone(models.Model):
 
 
 class Medication(models.Model):
+
     drone = models.ForeignKey(Drone, on_delete=models.CASCADE, **OPTIONAL, related_name='medications')
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, validators=[
+        RegexValidator(
+            regex=r'^(?=.*[a-zA-Z0-9])[a-zA-Z0-9-_]+$',
+            message='Invalid Format'
+        )
+    ])
     weight = models.FloatField()
-    code = models.CharField(max_length=100)
+    code = models.CharField(max_length=100, validators=[
+        RegexValidator(
+            regex=r'^(?=.*[a-zA-Z0-9])[a-zA-Z0-9_]+$',
+            message='Invalid Format'
+        )
+    ])
     image = models.ImageField(upload_to='med_images/', **OPTIONAL)
     created_at = models.DateTimeField(auto_now=True)
 
