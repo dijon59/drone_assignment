@@ -7,7 +7,7 @@ from .views import RegisterDroneViewset, DroneViewset
 router = DefaultRouter()
 
 router.register('register-drone', RegisterDroneViewset, basename='register-drone')
-router.register('drones', DroneViewset, basename='load-medications')
+router.register('drones', DroneViewset, basename='drones')
 
 urlpatterns = [
     path('', include(router.urls)),

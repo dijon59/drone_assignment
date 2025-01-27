@@ -37,10 +37,15 @@ class RegisterDroneViewset(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
 class DroneViewset(ViewSet):
     """
+    A Viewset for managing drone services, consisting of the following endpoint:
+    - loading-medications [POST]
+    - loaded-medications [GET]
+    - available-drones [GET]
+    - battery-level [GET]
     """
 
     @action(detail=True, methods=["post"], url_path="load-medications")
-    def load_medication(self, request, pk):
+    def load_medications(self, request, pk):
         drone = get_object_or_404(Drone, pk=pk)
         med_data = request.data
         serializer = LoadMedicationSerializer(data=med_data, context={'drone': drone})
@@ -74,7 +79,7 @@ class DroneViewset(ViewSet):
         )
 
     @action(detail=True, methods=["get"], url_path="loaded-medications")
-    def check_loaded_mediction(self, request, pk):
+    def check_loaded_medictions(self, request, pk):
         drone = get_object_or_404(Drone, pk=pk)
 
         return Response({
@@ -86,13 +91,11 @@ class DroneViewset(ViewSet):
         })
 
     @action(detail=False, methods=["get"], url_path="available-drones")
-    def check_available_drone(self, request):
-        """
-        """
+    def check_available_drones(self, request):
         drones = Drone.objects.filter(Q(state=DroneState.IDLE) | Q(state=DroneState.RETURNING), battery_capacity__gte=25)
 
         return Response ({
-            'available_drones': drones,
+            'available_drones': DroneSerializer(drones, many=True).data,
         })
 
     @action(detail=True, methods=["get"], url_path="battery-level")

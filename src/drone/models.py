@@ -30,7 +30,7 @@ class Medication(models.Model):
             regex=r'^(?=.*[a-zA-Z0-9])[a-zA-Z0-9_]+$',
             message='Invalid Format'
         )
-    ])
+    ], unique=True)
     image = models.ImageField(upload_to='med_images/', **OPTIONAL)
     created_at = models.DateTimeField(auto_now=True)
 

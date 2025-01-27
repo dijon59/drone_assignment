@@ -16,6 +16,12 @@ class DroneSerializer(serializers.ModelSerializer):
             'created_at',
         )
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['drone_model'] = str(instance.drone_model)
+        data['state'] = str(instance.state)
+        return data
+
 
 class MedicationSerializer(serializers.ModelSerializer):
     class Meta:
