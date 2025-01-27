@@ -10,6 +10,25 @@ from django.utils.timezone import now
 from django.db.models import Q
 
 
+def _calculate_battery_depletion(drone: Drone):
+    """
+    Battery drain is calculated based on two metrics; time and weight,
+    We assume that 0.005% battery depletin per 1 gram and 0.002% battery depletion per minute
+    """
+    total_loaded_weight = sum(med.weight for med in drone.medications.all())
+
+    battery_capacity_depletion_per_g = 0.005 # 0.005% battery depletion 1gr
+    depletion_per_minutes = 0.002  # 0.002% battery depletion per minute
+
+    # get time between now and last update
+    btw_time_in_minutes = 0
+    if drone.last_time_updated:
+        btw_time = now() - drone.last_time_updated
+        btw_time_in_minutes = btw_time.total_seconds() / 60 
+
+    return (total_loaded_weight * battery_capacity_depletion_per_g) + (depletion_per_minutes * btw_time_in_minutes)
+
+
 class RegisterDroneViewset(mixins.CreateModelMixin, viewsets.GenericViewSet):
     permission_classes = ()
     authentication_classes = ()
@@ -19,21 +38,6 @@ class RegisterDroneViewset(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class DroneViewset(ViewSet):
     """
     """
-    def _calculate_battery_depletion(self, drone: Drone):
-        """
-        Battery drain is calculated based on two metrics; time and weight
-        """
-        total_loaded_weight = sum(med.weight for med in drone.medications.all())
-
-        battery_capacity_depletion_per_g = 0.5 # 0.5% 1gr
-        depletion_per_minutes = 0.02  # 0.02% per minute
-
-        # get time between now and last update
-        btw_time = now() - drone.last_time_updated
-        btw_minutes = btw_time.total_seconds() / 60
-
-        return (total_loaded_weight * battery_capacity_depletion_per_g) + (depletion_per_minutes * btw_minutes)
-
 
     @action(detail=True, methods=["post"], url_path="load-medications")
     def load_medication(self, request, pk):
@@ -50,10 +54,11 @@ class DroneViewset(ViewSet):
             medication.save()
 
         # update drone state if meds are loaded
-        if drone.medications.all().count() > 0:
+        loaded_medications = drone.medications.all()
+        if loaded_medications.count() > 0:
             drone.state = DroneState.LOADED
             drone.last_time_updated = now()
-            drone.battery_capacity -= self._calculate_battery_depletion(drone)
+            drone.battery_capacity -= _calculate_battery_depletion(drone)
             drone.save()
 
         return Response(
@@ -64,7 +69,7 @@ class DroneViewset(ViewSet):
                     "battery_capacity": drone.battery_capacity,
                     "state": drone.state.value,
                 },
-                "medications": MedicationSerializer(drone.medications.all(), many=True).data,
+                "medications": MedicationSerializer(loaded_medications, many=True).data,
             },
         )
 
@@ -93,7 +98,7 @@ class DroneViewset(ViewSet):
     @action(detail=True, methods=["get"], url_path="battery-level")
     def check_battery_level(self, request, pk):
         drone = get_object_or_404(Drone, pk=pk)
-        battery_capacity = drone.battery_capacity - self._calculate_battery_depletion(drone)
+        battery_capacity = drone.battery_capacity - _calculate_battery_depletion(drone)
 
         return Response({
             'drone': {

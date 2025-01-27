@@ -16,8 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('src.drone.api.urls'))
+    path('api/', include('src.drone.api.urls')),
 ]
+
+# this will serve image files during development
+# for production we will be using s3 bucket to serve files
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

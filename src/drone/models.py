@@ -22,3 +22,9 @@ class Medication(models.Model):
     code = models.CharField(max_length=100)
     image = models.ImageField(upload_to='med_images/', **OPTIONAL)
     created_at = models.DateTimeField(auto_now=True)
+
+
+class DroneBatteryLogHistory(models.Model):
+    drone = models.ForeignKey(Drone, on_delete=models.CASCADE)
+    battery_capacity = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+    created_at = models.DateTimeField(auto_now=True)

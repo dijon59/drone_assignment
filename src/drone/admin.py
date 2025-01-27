@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Drone, Medication
+from .models import Drone, Medication, DroneBatteryLogHistory
 
 
 @admin.register(Drone)
@@ -11,3 +11,8 @@ class DroneModelAdmin(admin.ModelAdmin):
 @admin.register(Medication)
 class MedicationModelAdmin(admin.ModelAdmin):
     list_display = ['name', 'weight', 'code']
+
+
+@admin.register(DroneBatteryLogHistory)
+class DroneBatteryLogHistoryModelAdmin(admin.ModelAdmin):
+    list_display = ['drone', 'battery_capacity', 'created_at']
