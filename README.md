@@ -32,7 +32,7 @@ $ python manage.py loaddata preload_data.json
 - Make sure redis is installed in your computer
 - run these commands on different terminals
 ```
-$ redid-server
+$ redis-server
 $ celery -A src.project worker -l info
 $ celery -A src.project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
