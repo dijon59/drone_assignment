@@ -16,3 +16,4 @@ class MedicationModelAdmin(admin.ModelAdmin):
 @admin.register(DroneBatteryLogHistory)
 class DroneBatteryLogHistoryModelAdmin(admin.ModelAdmin):
     list_display = ['drone', 'battery_capacity', 'created_at']
+    search_fields = ['drone__id', 'drone__serial_number']

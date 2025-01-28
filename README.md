@@ -27,8 +27,15 @@ pip install -r requirements.txt
 $ python manage.py makemigrations
 $ python manage.py migrate
 $ python manage.py createsuperuser
-``` 
-5. Run tests
+```
+5. Run Celery worker and beat command
+- run these commands on different terminals
+```
+$ celery -A src.project worker -l info
+$ celery -A src.project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+6. Run tests
 ```
 in project directory run the following command:
 $ python manage.py test src.drone.tests

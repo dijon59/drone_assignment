@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+    command: redis-server
+  web:
+    build: .
+    depends_on:
+      - redis
+    command: bash -c "python manage.py migrate
+             && python manage.py runserver 0.0.0.0:8000"
+            #  && python manage.py loaddata preload_data.json
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+  
+  celery:
+    build: .
+    container_name: celery_worker
+    command: celery -A src.project worker -l info
+    depends_on:
+      - redis
+      - web
+    volumes:
+      - .:/code
+    environment:
+      - CELERY_BROKER_URL=redis://redis_container:6379/1
+  
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    command: celery -A src.project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - redis
+      - web
+    volumes:
+      - .:/code
+    environment:
+      - CELERY_BROKER_URL=redis://redis_container:6379/1
+
+volumes:
+  redis_data:

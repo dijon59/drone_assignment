@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from src.drone.enums import DroneState
 from src.drone.models import Drone, Medication
@@ -43,7 +44,7 @@ class LoadMedicationSerializer(serializers.Serializer):
         """
         helper function to calculate total medication weight
         """
-        total_weight = 0.0
+        total_weight = Decimal(0.0)
         for med in medications:
             total_weight += med.weight
         return total_weight
@@ -56,7 +57,7 @@ class LoadMedicationSerializer(serializers.Serializer):
         if drone.battery_capacity < 25:
             raise serializers.ValidationError("Can not load medication, battery capacity is low")
 
-        if drone.state != DroneState.IDLE:
+        if drone.state != DroneState.LOADING:
             raise serializers.ValidationError("Not valid state to load medication.")
 
         if med_total_weight > drone.weight_limit:
